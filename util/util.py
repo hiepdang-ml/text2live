@@ -1,6 +1,8 @@
+import os
 from pathlib import Path
 
 import numpy as np
+import cv2
 import torch
 import torch.nn.functional as F
 from PIL import Image
@@ -109,3 +111,31 @@ def load_video(folder: str, resize=(432, 768), num_frames=70):
         video[i] = transforms.ToTensor()(Image.open(str(file)).resize((resx, resy), Image.LANCZOS))
 
     return video
+
+
+def video_to_images(video_path: os.PathLike, output_dir: os.PathLike, num_frames: int = None) -> None:
+    # Create the output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Open the video file
+    vidcap = cv2.VideoCapture(str(video_path))
+
+    # Get the total number of frames in the video
+    total_frames = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    # Calculate the number of frames to skip to get the desired number of frames
+    frame_skip = 1 if num_frames is None else total_frames // num_frames
+
+    success, image = vidcap.read()
+    write_count = 0
+    read_count = 0
+    while success and write_count < num_frames:
+        # Save frame as JPEG file only if it's the right frame according to the frame_skip
+        if read_count % frame_skip == 0:
+            cv2.imwrite(os.path.join(output_dir, f"frame{write_count}.jpg"), image)
+            write_count += 1
+
+        success, image = vidcap.read()
+        read_count += 1
+
+    
